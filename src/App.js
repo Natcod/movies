@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import MovieDetails from "./MovieDetails";
 import Loader from "./Loader";
 import { useMovie } from "./useMovie";
+import { useLocalStorageState } from "./useLocalStorageState";
+import { useKey } from "./useKey";
 
 const average = (arr) =>
   arr.reduce((acc, cur, i, arr) => acc + cur / arr.length, 0);
@@ -12,13 +14,9 @@ const average = (arr) =>
 export default function App() {
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState(null);
+  const { movies, isLoading, error } = useMovie(query);
 
-  // const [watched, setWatched] = useState([]);
-  const [watched, setWatched] = useState(function () {
-    const storedValue = localStorage.getItem("watched");
-
-    return JSON.parse(storedValue);
-  });
+  const [watched, setWatched] = useLocalStorageState([], "watched");
 
   function handleSelectMovie(id) {
     setSelectedId((selectedId) => (id === selectedId ? null : id));
@@ -36,15 +34,6 @@ export default function App() {
   function handleDeleteWatched(id) {
     setWatched((watched) => watched.filter((movie) => movie.imdbID !== id));
   }
-
-  useEffect(
-    function () {
-      localStorage.setItem("watched", JSON.stringify(watched));
-    },
-    [watched]
-  );
-
-  const { movies, isLoading, error } = useMovie(query, handleCloseMovie);
 
   return (
     <>
@@ -110,22 +99,11 @@ function Logo() {
 // Stateful
 function Search({ query, setQuery }) {
   const inputEl = useRef(null);
-
-  useEffect(
-    function () {
-      function callback(e) {
-        if (document.activeElement === inputEl.current) return;
-
-        if (e.code === "Enter") {
-          inputEl.current.focus();
-          setQuery("");
-        }
-      }
-      document.addEventListener("keydown", callback);
-      return () => document.addEventListener("keydown", callback);
-    },
-    [setQuery]
-  );
+  useKey("enter", function () {
+    if (document.activeElement === inputEl.current) return;
+    inputEl.current.focus();
+    setQuery("");
+  });
 
   return (
     <input
